@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import axios from 'axios';
+import { uploadSingle } from './api';
+import type { errorMessages } from 'vue/compiler-sfc';
 
 interface MultiResList {
 	id: string;
@@ -13,44 +14,63 @@ interface MultiResList {
 }
 
 const multiResData = ref<MultiResList[]>([]);
-const imgUrl = ref<string>('');
 const multiLoader = ref(false);
 const isDisabled = ref(false);
-const limit = ref<number>(25600000);
+const maxCount = ref(false);
+const errorMessage = ref(false);
+const props = withDefaults(
+	defineProps<{
+		maxSize?: number;
+		maxElementCount?: number;
+		isMultiple: boolean;
+	}>(),
+	{
+		maxSize: 10 * 1024 * 1024,
+		maxElementCount: 3,
+		isMultiple: true,
+	}
+);
+
+const getFileType = (item: File) => {
+	if (item.type.includes('png')) {
+		return URL.createObjectURL(item);
+	} else if (item.type.includes('jpeg')) {
+		return URL.createObjectURL(item);
+	} else if (item.type.includes('pdf')) {
+		return 'https://play-lh.googleusercontent.com/9XKD5S7rwQ6FiPXSyp9SzLXfIue88ntf9sJ9K250IuHTL7pmn2-ZB0sngAX4A2Bw4w';
+	} else if (item.type.includes('zip')) {
+		return 'https://d1nhio0ox7pgb.cloudfront.net/_img/g_collection_png/standard/512x512/folder_zip.png';
+	} else if (item.type.includes('sql')) {
+		return 'https://www.shareicon.net/data/2015/09/07/97430_document_512x512.png';
+	} else if (item.type.includes('html')) {
+		return 'https://cdn4.iconfinder.com/data/icons/smashicons-file-types-flat/56/22_-_HTML_File_Flat-512.png';
+	} else {
+		return 'https://www.iconpacks.net/icons/2/free-file-icon-1453-thumb.png';
+	}
+};
 
 function multiChange(e: Event) {
-	const files = (e.target as HTMLInputElement).files;
+	const input = (e.target as HTMLInputElement).files;
 
-	if (!files) return;
+	if (!input) return;
 
-	for (let i = 0; i < files.length; i++) {
-		const item = files[i];
-
-		if (item.type.includes('jpeg') || item.type.includes('png')) {
-			imgUrl.value = URL.createObjectURL(item);
-		} else if (item.type.includes('pdf')) {
-			imgUrl.value =
-				'https://play-lh.googleusercontent.com/9XKD5S7rwQ6FiPXSyp9SzLXfIue88ntf9sJ9K250IuHTL7pmn2-ZB0sngAX4A2Bw4w';
-		} else if (item.type.includes('zip')) {
-			imgUrl.value =
-				'https://d1nhio0ox7pgb.cloudfront.net/_img/g_collection_png/standard/512x512/folder_zip.png';
-		} else if (item.type.includes('sql')) {
-			imgUrl.value = 'https://www.shareicon.net/data/2015/09/07/97430_document_512x512.png';
-		} else if (item.type.includes('html')) {
-			imgUrl.value =
-				'https://cdn4.iconfinder.com/data/icons/smashicons-file-types-flat/56/22_-_HTML_File_Flat-512.png';
-		} else {
-			imgUrl.value = 'https://www.iconpacks.net/icons/2/free-file-icon-1453-thumb.png';
-		}
+	for (let i = 0; i < input.length; i++) {
+		const item = input[i];
+		errorMessage.value = item.size > props.maxSize ? true : false;
+		const type = getFileType(item);
 		multiResData.value.push({
 			id: new Date().getTime() + i.toString(),
 			file: item,
 			size: item.size,
-			img: imgUrl.value,
+			img: type,
 			name: item.name,
 			status: 0,
 			objectName: '',
 		});
+		if (multiResData.value.length == props.maxElementCount) {
+			maxCount.value = true;
+			return;
+		}
 	}
 }
 
@@ -60,7 +80,7 @@ const multipleUpload = async () => {
 	for (let i = 0; i < multiResData.value.length; i++) {
 		try {
 			if (multiResData.value[i].status !== 1) {
-				if (multiResData.value[i].size < limit.value) {
+				if (multiResData.value[i].size < props.maxSize) {
 					const response = await uploadSingle(multiResData.value[i].file);
 					multiResData.value[i].objectName = response.data.objectName;
 					multiLoader.value = false;
@@ -80,21 +100,18 @@ const multipleUpload = async () => {
 	}
 };
 
-async function uploadSingle(file: File) {
-	const data = new FormData();
-	data.append('tenantId', 'test');
-	data.append('module', 'test');
-	data.append('fileName', 'test' + file.name);
-	data.append('file', file);
-
-	const res = await axios.post('http://192.168.100.241:9999/api/file/upload/public', data);
-
-	return res;
-}
-
 const remove = async (id: string) => {
 	multiResData.value = multiResData.value.filter((e) => e.id !== id);
+	if (multiResData.value.length < props.maxElementCount) {
+		maxCount.value = false;
+	}
 };
+
+defineExpose({
+	multiChange,
+	multiResData,
+	uploadSingle,
+});
 </script>
 
 <template>
@@ -129,8 +146,19 @@ const remove = async (id: string) => {
 				</div>
 			</div>
 
-			<label class="buttons border h-[200px] relative">
-				<input class="hidden" type="file" multiple @change="multiChange" />
+			<label
+				:data="maxCount ? 'max-count' : ''"
+				:id="errorMessage ? 'large-file' : ''"
+				:class="multiResData.length >= props.maxElementCount ? 'hidden' : undefined"
+				class="buttons border h-[200px] relative"
+			>
+				<input
+					v-if="multiResData.length < props.maxElementCount"
+					class="hidden"
+					type="file"
+					:multiple="isMultiple"
+					@change="multiChange"
+				/>
 			</label>
 		</div>
 		<button :disabled="isDisabled" @click="multipleUpload" class="btn btn-blue w-[200px]">
@@ -160,3 +188,4 @@ const remove = async (id: string) => {
 	background-size: cover;
 }
 </style>
+./singleUploadType
