@@ -1,81 +1,56 @@
 <script setup lang="ts">
-import { ref, type DefineProps } from 'vue';
-import { uploadSingle } from './api';
+import { ref } from 'vue';
+import { Icon, Status, getFileType } from '../utils';
+import { uploadSingle } from '../service/api';
 
 interface Single {
 	file: File;
 	size: number;
 	img: string;
 	name: string;
-	status: number;
+	status: string;
 	errorMessage: boolean;
 }
-
-const props = withDefaults(
-	defineProps<{
-		maxSize?: number;
-		fileType: string;
-	}>(),
-	{
-		maxSize: 10 * 1024 * 1024, // 10mb
-		fileType: 'application/pdf',
-	}
-);
+interface Props {
+	maxSize: number;
+	fileType: string;
+}
+const props = defineProps<Props>();
 
 const singleFile = ref<Single>();
 const singleLoader = ref(false);
 const singleStatus = ref(0);
 
 function singleChange(e: any) {
-	const input = e.target as HTMLInputElement;
-	if (!input.files || input.files[0].type !== props.fileType) return;
+	const input = (e.target as HTMLInputElement).files;
+	if (!input || input[0].type !== props.fileType) return;
 
-	const img = getFileType(e.target.files[0]);
-	const errorMessage = input.files[0].size > props.maxSize ? true : false;
 	singleFile.value = {
-		file: e.target.files[0],
-		size: e.target.files[0].size,
-		img: img,
-		name: e.target.files[0].name,
-		status: 0,
-		errorMessage,
+		file: input[0],
+		size: input[0].size,
+		img: getFileType(input[0]),
+		name: input[0].name,
+		status: '',
+		errorMessage: input[0].size > props.maxSize ? true : false,
 	};
 }
-
-const getFileType = (item: File) => {
-	if (item.type.includes('png')) {
-		return URL.createObjectURL(item);
-	} else if (item.type.includes('jpeg')) {
-		return URL.createObjectURL(item);
-	} else if (item.type.includes('pdf')) {
-		return 'https://play-lh.googleusercontent.com/9XKD5S7rwQ6FiPXSyp9SzLXfIue88ntf9sJ9K250IuHTL7pmn2-ZB0sngAX4A2Bw4w';
-	} else if (item.type.includes('zip')) {
-		return 'https://d1nhio0ox7pgb.cloudfront.net/_img/g_collection_png/standard/512x512/folder_zip.png';
-	} else if (item.type.includes('sql')) {
-		return 'https://www.shareicon.net/data/2015/09/07/97430_document_512x512.png';
-	} else if (item.type.includes('html')) {
-		return 'https://cdn4.iconfinder.com/data/icons/smashicons-file-types-flat/56/22_-_HTML_File_Flat-512.png';
-	} else {
-		return 'https://www.iconpacks.net/icons/2/free-file-icon-1453-thumb.png';
-	}
-};
 
 const singleUpload = async () => {
 	if (singleFile.value) {
 		try {
 			if (singleFile.value.size < props.maxSize) {
-				if (singleFile.value.status !== 1) {
+				if (singleFile.value.status !== Icon[Status.success]) {
 					singleLoader.value = true;
-					const response = await uploadSingle(singleFile.value.file);
+					await uploadSingle(singleFile.value.file);
 					singleLoader.value = false;
-					singleFile.value.status = 1;
-					const url = response.data.objectName as string;
+
+					singleFile.value.status = Icon[Status.success];
 				}
 			} else {
-				singleFile.value.status = 3;
+				singleFile.value.status = Icon[Status.failed];
 			}
 		} catch (error: any) {
-			singleFile.value.status = 2;
+			singleFile.value.status = Icon[Status.error];
 			singleLoader.value = false;
 		}
 	}
@@ -85,7 +60,6 @@ defineExpose({
 	singleChange,
 	singleUpload,
 	getFileType,
-	uploadSingle,
 });
 </script>
 
@@ -103,21 +77,7 @@ defineExpose({
 				})`,
 			}"
 		>
-		<img
-		v-if="singleFile?.status == 1"
-			class="absolute top-0 left-1 w-[30px]"
-				src="https://www.shareicon.net/data/2016/08/20/817720_check_395x512.png"
-			/>
-			<img
-			v-if="singleFile?.status == 2"
-			class="absolute top-1 left-1 w-[30px]"
-				src="https://upload.wikimedia.org/wikipedia/commons/4/43/Minimalist_info_Icon.png"
-			/>
-			<img
-				v-if="singleFile?.status == 3"
-				class="absolute top-1 left-1 w-[30px]"
-				src="https://www.iconpacks.net/icons/2/free-storage-icon-1452-thumb.png"
-			/>
+			<img class="absolute top-0 left-1 w-[30px]" :src="singleFile?.status" />
 			<input class="hidden" type="file" @change="singleChange" />
 		</label>
 		<p class="w-[200px]">{{ singleFile?.name }}</p>
@@ -153,4 +113,3 @@ defineExpose({
 	background-size: cover;
 }
 </style>
-./singleUploadType

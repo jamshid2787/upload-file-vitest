@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { uploadSingle } from '@/service';
+import { Icon, Status, getFileType } from '@/utils';
 import { ref } from 'vue';
-import { uploadSingle } from './api';
-import type { errorMessages } from 'vue/compiler-sfc';
 
 interface MultiResList {
 	id: string;
@@ -9,7 +9,7 @@ interface MultiResList {
 	size: number;
 	img: string;
 	name: string;
-	status: number;
+	status: string;
 	objectName: string;
 }
 
@@ -18,36 +18,13 @@ const multiLoader = ref(false);
 const isDisabled = ref(false);
 const maxCount = ref(false);
 const errorMessage = ref(false);
-const props = withDefaults(
-	defineProps<{
-		maxSize?: number;
-		maxElementCount?: number;
-		isMultiple: boolean;
-	}>(),
-	{
-		maxSize: 10 * 1024 * 1024,
-		maxElementCount: 3,
-		isMultiple: true,
-	}
-);
 
-const getFileType = (item: File) => {
-	if (item.type.includes('png')) {
-		return URL.createObjectURL(item);
-	} else if (item.type.includes('jpeg')) {
-		return URL.createObjectURL(item);
-	} else if (item.type.includes('pdf')) {
-		return 'https://play-lh.googleusercontent.com/9XKD5S7rwQ6FiPXSyp9SzLXfIue88ntf9sJ9K250IuHTL7pmn2-ZB0sngAX4A2Bw4w';
-	} else if (item.type.includes('zip')) {
-		return 'https://d1nhio0ox7pgb.cloudfront.net/_img/g_collection_png/standard/512x512/folder_zip.png';
-	} else if (item.type.includes('sql')) {
-		return 'https://www.shareicon.net/data/2015/09/07/97430_document_512x512.png';
-	} else if (item.type.includes('html')) {
-		return 'https://cdn4.iconfinder.com/data/icons/smashicons-file-types-flat/56/22_-_HTML_File_Flat-512.png';
-	} else {
-		return 'https://www.iconpacks.net/icons/2/free-file-icon-1453-thumb.png';
-	}
-};
+interface Props {
+	maxSize: number;
+	maxElementCount: number;
+	isMultiple: boolean;
+}
+const props = defineProps<Props>();
 
 function multiChange(e: Event) {
 	const input = (e.target as HTMLInputElement).files;
@@ -64,7 +41,7 @@ function multiChange(e: Event) {
 			size: item.size,
 			img: type,
 			name: item.name,
-			status: 0,
+			status: '',
 			objectName: '',
 		});
 		if (multiResData.value.length == props.maxElementCount) {
@@ -79,22 +56,22 @@ const multipleUpload = async () => {
 	multiLoader.value = true;
 	for (let i = 0; i < multiResData.value.length; i++) {
 		try {
-			if (multiResData.value[i].status !== 1) {
+			if (multiResData.value[i].status !== Icon[Status.success]) {
 				if (multiResData.value[i].size < props.maxSize) {
 					const response = await uploadSingle(multiResData.value[i].file);
 					multiResData.value[i].objectName = response.data.objectName;
 					multiLoader.value = false;
 
 					if (response.status == 200) {
-						multiResData.value[i].status = 1;
+						multiResData.value[i].status = Icon[Status.success];
 					}
 				} else {
-					multiResData.value[i].status = 3;
+					multiResData.value[i].status = Icon[Status.failed];
 				}
 			}
 			multiLoader.value = false;
 		} catch (error) {
-			multiResData.value[i].status = 2;
+			multiResData.value[i].status = Icon[Status.error];
 			multiLoader.value = false;
 		}
 	}
@@ -121,21 +98,7 @@ defineExpose({
 			<div class="flex flex-wrap" v-for="item in multiResData" key="item.id">
 				<div class="relative">
 					<img :src="item.img" class="w-[200px] h-[200px] border" />
-					<img
-						v-if="item.status == 1"
-						class="absolute top-0 left-1 w-[30px]"
-						src="https://www.shareicon.net/data/2016/08/20/817720_check_395x512.png"
-					/>
-					<img
-						v-else-if="item.status == 2"
-						class="absolute top-1 left-1 w-[30px]"
-						src="https://upload.wikimedia.org/wikipedia/commons/4/43/Minimalist_info_Icon.png"
-					/>
-					<img
-						v-else-if="item.status == 3"
-						class="absolute top-1 left-1 w-[30px]"
-						src="https://www.iconpacks.net/icons/2/free-storage-icon-1452-thumb.png"
-					/>
+					<img class="absolute top-1 left-1 w-[30px]" :src="item.status" />
 					<p class="w-[150px]">{{ item.name }}</p>
 					<button
 						@click="remove(item.id)"
@@ -188,4 +151,4 @@ defineExpose({
 	background-size: cover;
 }
 </style>
-./singleUploadType
+./singleUploadType ../utils/api

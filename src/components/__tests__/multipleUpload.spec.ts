@@ -3,11 +3,17 @@ import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import Multiple from '../multipleUpload.vue';
 import { nextTick } from 'vue';
-import { uploadSingle } from '../api';
+import { uploadSingle } from '../../service/api';
 
 describe('multipleUpload', () => {
 	it('should render File input', () => {
-		const wrapper = mount(Multiple);
+		const wrapper = mount(Multiple, {
+			props: {
+				maxSize: 10 * 1024 * 1024,
+				maxElementCount: 5,
+				isMultiple: true,
+			},
+		});
 
 		expect(wrapper.find('input').html()).matchSnapshot();
 	});
@@ -17,6 +23,7 @@ describe('multipleUpload', () => {
 			props: {
 				maxSize: 4,
 				maxElementCount: 10,
+				isMultiple: true,
 			},
 		});
 		const inputElement = wrapper.find('input[type="file"]').element as HTMLInputElement;
@@ -41,6 +48,7 @@ describe('multipleUpload', () => {
 			props: {
 				maxSize: 25,
 				maxElementCount: 4,
+				isMultiple: true,
 			},
 		});
 		const inputElement = wrapper.find('input[type="file"]').element as HTMLInputElement;
@@ -72,6 +80,7 @@ describe('multipleUpload', () => {
 			props: {
 				maxSize: 25,
 				maxElementCount: 8,
+				isMultiple: true,
 			},
 		});
 		const inputElement = wrapper.find('input[type="file"]').element as HTMLInputElement;
@@ -99,6 +108,8 @@ describe('multipleUpload', () => {
 	it('should input type isMultiple', () => {
 		const wrapper = mount(Multiple, {
 			props: {
+				maxSize: 10 * 1024 * 1024,
+				maxElementCount: 5,
 				isMultiple: true,
 			},
 		});

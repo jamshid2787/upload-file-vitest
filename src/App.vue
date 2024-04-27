@@ -4,8 +4,8 @@ import Multiple from './components/multipleUpload.vue';
 </script>
 
 <template>
-	<Single />
-	<Multiple />
+	<Single :maxSize="10 * 1024 * 1024" fileType="application/pdf" />
+	<Multiple :maxSize="10 * 1024 * 1024" :maxElementCount="5" :isMultiple="true" />
 </template>
 
 <style scoped></style>

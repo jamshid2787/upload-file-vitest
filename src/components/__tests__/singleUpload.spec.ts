@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import Single from '../singleUpload.vue';
 import { nextTick } from 'vue';
-import { uploadSingle } from '../api';
+import { uploadSingle } from '../../service/api';
 
 describe.concurrent('singleleUpload', () => {
 	it('should render File input', () => {
@@ -64,6 +64,7 @@ describe.concurrent('singleleUpload', () => {
 		const wrapper = mount(Single, {
 			props: {
 				maxSize: 10,
+				fileType: 'test/plain',
 			},
 		});
 
@@ -86,11 +87,12 @@ describe.concurrent('singleleUpload', () => {
 	it('should file mime type', async () => {
 		const wrapper = mount(Single, {
 			props: {
+				maxSize: 10,
 				fileType: 'application/pdf',
 			},
 		});
 		const inputElement = wrapper.find('input[type="file"]').element as HTMLInputElement;
-		const file = new File(['2768432'], 'foo.pdf', {
+		const file = new File(['27432'], 'foo.pdf', {
 			type: 'application/pdf',
 		});
 		const mockFileList = Object.create(inputElement.files);
